@@ -1,122 +1,82 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+// frontend/src/App.jsx
+import { useState, useEffect } from 'react';
+import socket from './socket';
+import Home from './components/Home';
+import Lobby from './components/Lobby';
+import Selection from './components/Selection';
+import MemeEditor from './components/MemeEditor';
+import Reveal from './components/Reveal';
+import VoteScreen from './components/VoteScreen';
+import Scoreboard from './components/Scoreboard';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [phase, setPhase] = useState('home');
+  const [room, setRoom] = useState(null);
+  const [myId, setMyId] = useState(null);
+  const [revealMemes, setRevealMemes] = useState([]);
+  const [voteResults, setVoteResults] = useState([]);
+  const [finalScores, setFinalScores] = useState([]);
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+  useEffect(() => {
+    socket.on('connect', () => setMyId(socket.id));
 
-      <div className="ticks"></div>
+    socket.on('room-created', ({ roomId }) => {
+      setPhase('lobby');
+    });
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+    socket.on('room-updated', (updatedRoom) => {
+      setRoom(updatedRoom);
+    });
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    socket.on('phase-changed', ({ phase: newPhase }) => {
+      setPhase(newPhase);
+    });
+
+    socket.on('reveal-memes', (memes) => {
+      setRevealMemes(memes);
+    });
+
+    socket.on('vote-results', (results) => {
+      setVoteResults(results);
+    });
+
+    socket.on('game-over', (scores) => {
+      setFinalScores(scores);
+    });
+
+    socket.on('room-closed', () => {
+      setPhase('home');
+      setRoom(null);
+    });
+
+    socket.on('error', ({ message }) => {
+      console.error('Socket error:', message);
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('room-created');
+      socket.off('room-updated');
+      socket.off('phase-changed');
+      socket.off('reveal-memes');
+      socket.off('vote-results');
+      socket.off('game-over');
+      socket.off('room-closed');
+      socket.off('error');
+    };
+  }, []);
+
+  const props = { room, myId, revealMemes, voteResults, finalScores };
+
+  switch (phase) {
+    case 'home':       return <Home onJoined={() => setPhase('lobby')} />;
+    case 'lobby':      return <Lobby {...props} />;
+    case 'selection':  return <Selection {...props} />;
+    case 'creation':   return <MemeEditor {...props} />;
+    case 'reveal':     return <Reveal {...props} revealMemes={revealMemes} />;
+    case 'vote':       return <VoteScreen {...props} />;
+    case 'scores':     return <Scoreboard {...props} voteResults={voteResults} isLastRound={false} />;
+    case 'gameover':   return <Scoreboard {...props} voteResults={voteResults} finalScores={finalScores} isLastRound={true} />;
+    default:           return <Home onJoined={() => setPhase('lobby')} />;
+  }
 }
-
-export default App
