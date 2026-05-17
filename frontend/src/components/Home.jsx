@@ -43,22 +43,12 @@ export default function Home({ onJoined }) {
             onChange={e => { setPseudo(e.target.value); setError(''); }}
             maxLength={20}
           />
-          <button data-testid="create-btn" onClick={() => setMode('create')}>
+          <button data-testid="create-btn" onClick={handleCreate}>
             Créer une room
           </button>
           <button data-testid="join-btn" onClick={() => setMode('join')}>
             Rejoindre une room
           </button>
-        </div>
-      )}
-
-      {mode === 'create' && (
-        <div className="create-form">
-          <p>Pseudo: <strong>{pseudo || '(vide)'}</strong></p>
-          <button data-testid="confirm-create-btn" onClick={handleCreate}>
-            Créer la room
-          </button>
-          <button onClick={() => setMode('choice')}>Retour</button>
         </div>
       )}
 
