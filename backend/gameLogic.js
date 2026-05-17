@@ -40,7 +40,7 @@ function swapImage(room, socketId, imageId) {
 function submitMeme(room, socketId, canvasJSON) {
   room.memes = room.memes.filter(m => m.playerId !== socketId);
   room.memes.push({ playerId: socketId, imageId: room.playerImages[socketId], canvasJSON });
-  return room;
+  return { room };
 }
 
 function submitVote(room, voterId, targetId) {
