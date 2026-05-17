@@ -106,8 +106,10 @@ export default function MemeEditor({ room, myId }) {
     });
   }
 
-  function handleSwap(imageId) {
-    socket.emit('swap-image', { roomId: room.id, imageId });
+  function handleSwap() {
+    if (swapImages.length === 0) return;
+    const random = swapImages[Math.floor(Math.random() * swapImages.length)];
+    socket.emit('swap-image', { roomId: room.id, imageId: random.id });
   }
 
   function handleSubmit() {
@@ -143,22 +145,9 @@ export default function MemeEditor({ room, myId }) {
       </div>
 
       {swapsLeft > 0 && swapImages.length > 0 && (
-        <div data-testid="swap-section" className="swap-section">
-          <h4>🔄 Swapper ton image :</h4>
-          <div className="swap-grid">
-            {swapImages.map(img => (
-              <button
-                key={img.id}
-                className="swap-thumb"
-                data-testid={`swap-btn-${img.id}`}
-                onClick={() => handleSwap(img.id)}
-                title="Prendre cette image"
-              >
-                <img src={img.base64} alt="option swap" />
-              </button>
-            ))}
-          </div>
-        </div>
+        <button data-testid="swap-btn" className="swap-btn" onClick={handleSwap}>
+          🔀 Swap ({swapsLeft} restant{swapsLeft > 1 ? 's' : ''})
+        </button>
       )}
     </div>
   );
