@@ -70,7 +70,10 @@ function addImage(roomId, socketId, base64) {
 
 function deleteRoom(roomId) {
   const room = _rooms.get(roomId);
-  if (room && room.timer) clearInterval(room.timer);
+  if (room) {
+    if (room.timer) clearInterval(room.timer);
+    if (room.voteTimer) clearTimeout(room.voteTimer);
+  }
   _rooms.delete(roomId);
 }
 

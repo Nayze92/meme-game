@@ -48,8 +48,9 @@ function endCreationPhase(room) {
 }
 
 function startVoteTimeout(room) {
-  setTimeout(() => {
+  room.voteTimer = setTimeout(() => {
     if (room.phase === 'vote') endVotePhase(room);
+    room.voteTimer = null;
   }, 30000);
 }
 
@@ -144,6 +145,7 @@ io.on('connection', (socket) => {
   socket.on('start-vote', ({ roomId }) => {
     const room = getRoom(roomId);
     if (!room || room.host !== socket.id) return socket.emit('error', { message: 'Not authorized' });
+    if (room.phase !== 'reveal') return socket.emit('error', { message: 'Not in reveal phase' });
     room.phase = 'vote';
     io.to(roomId).emit('phase-changed', { phase: 'vote' });
     startVoteTimeout(room);
@@ -167,6 +169,7 @@ io.on('connection', (socket) => {
       const finalScores = [...room.players].sort((a, b) => b.score - a.score);
       io.to(roomId).emit('game-over', finalScores);
       io.to(roomId).emit('phase-changed', { phase: 'gameover' });
+      emitRoom(roomId);
     } else {
       startSelection(room);
       io.to(roomId).emit('phase-changed', { phase: 'selection' });
