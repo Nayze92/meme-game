@@ -107,6 +107,21 @@ describe('swapImage', () => {
   });
 });
 
+describe('submitMeme', () => {
+  test('retourne erreur si le joueur n\'a pas d\'image', () => {
+    const result = submitMeme(room, 's1', {});
+    expect(result.error).toBe('no image selected');
+  });
+
+  test('soumet un mème avec l\'image du joueur', () => {
+    room.playerImages['s1'] = 'img1';
+    const result = submitMeme(room, 's1', { objects: [] });
+    expect(result.error).toBeUndefined();
+    expect(room.memes).toHaveLength(1);
+    expect(room.memes[0]).toMatchObject({ playerId: 's1', imageId: 'img1' });
+  });
+});
+
 describe('submitVote et calculateScores', () => {
   test('ne peut pas voter pour soi-même', () => {
     const result = submitVote(room, 's1', 's1');

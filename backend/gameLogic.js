@@ -38,6 +38,7 @@ function swapImage(room, socketId, imageId) {
 }
 
 function submitMeme(room, socketId, canvasJSON) {
+  if (!room.playerImages[socketId]) return { error: 'no image selected' };
   room.memes = room.memes.filter(m => m.playerId !== socketId);
   room.memes.push({ playerId: socketId, imageId: room.playerImages[socketId], canvasJSON });
   return { room };
