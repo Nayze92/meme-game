@@ -4,7 +4,7 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const { createRoom, getRoom, addPlayer, removePlayer, addImage, deleteRoom } = require('./rooms');
-const { startSelection, selectImage, swapImage, submitMeme, submitVote, allVotesIn, calculateScores, isGameOver } = require('./gameLogic');
+const { startCreationDirect, selectImage, swapImage, submitMeme, submitVote, allVotesIn, calculateScores, isGameOver } = require('./gameLogic');
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
@@ -103,10 +103,10 @@ io.on('connection', (socket) => {
     const room = getRoom(roomId);
     if (!room || room.host !== socket.id) return socket.emit('error', { message: 'Not authorized' });
     if (room.players.length < 2) return socket.emit('error', { message: 'Need at least 2 players' });
-    if (room.library.length < room.players.length) return socket.emit('error', { message: 'Not enough images in library' });
-    startSelection(room);
-    io.to(roomId).emit('phase-changed', { phase: 'selection' });
-    io.to(roomId).emit('selection-turn', { playerId: room.selectionQueue[0] });
+    if (room.library.length === 0) return socket.emit('error', { message: 'Ajoutez au moins une image dans la bibliothèque' });
+    startCreationDirect(room);
+    io.to(roomId).emit('phase-changed', { phase: 'creation' });
+    startTimer(room);
     emitRoom(roomId);
   });
 
@@ -171,9 +171,9 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('phase-changed', { phase: 'gameover' });
       emitRoom(roomId);
     } else {
-      startSelection(room);
-      io.to(roomId).emit('phase-changed', { phase: 'selection' });
-      io.to(roomId).emit('selection-turn', { playerId: room.selectionQueue[0] });
+      startCreationDirect(room);
+      io.to(roomId).emit('phase-changed', { phase: 'creation' });
+      startTimer(room);
       emitRoom(roomId);
     }
   });

@@ -13,9 +13,11 @@ export default function MemeEditor({ room, myId }) {
 
   const myImageId = room?.playerImages?.[myId];
   const myImage = room?.library?.find(img => img.id === myImageId);
-  const roundImages = (room?.roundImages || [])
+
+  // All round images except my current one → swap candidates
+  const swapImages = (room?.roundImages || [])
     .map(id => room?.library?.find(img => img.id === id))
-    .filter(Boolean);
+    .filter((img, idx, arr) => img && img.id !== myImageId && arr.findIndex(i => i?.id === img.id) === idx);
 
   useEffect(() => {
     socket.on('timer-tick', ({ secondsLeft }) => setTimeLeft(secondsLeft));
@@ -31,17 +33,53 @@ export default function MemeEditor({ room, myId }) {
 
   useEffect(() => {
     if (!canvasRef.current || !myImage) return;
+
     import('fabric').then(({ Canvas, FabricImage, Textbox }) => {
-      if (fabricRef.current) fabricRef.current.dispose();
-      const canvas = new Canvas(canvasRef.current, { width: 600, height: 400 });
+      if (fabricRef.current) {
+        fabricRef.current.dispose();
+        fabricRef.current = null;
+      }
+
+      const canvas = new Canvas(canvasRef.current, {
+        width: 600,
+        height: 400,
+        backgroundColor: '#111',
+      });
       fabricRef.current = canvas;
 
-      FabricImage.fromURL(myImage.base64).then(img => {
-        img.scaleToWidth(600);
-        canvas.backgroundImage = img;
+      // Ensure proper data URI prefix
+      const src = myImage.base64.startsWith('data:')
+        ? myImage.base64
+        : `data:image/jpeg;base64,${myImage.base64}`;
+
+      FabricImage.fromURL(src).then(img => {
+        // Scale to fill canvas while keeping aspect ratio
+        const scaleX = 600 / img.width;
+        const scaleY = 400 / img.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        img.set({
+          left: 300,
+          top: 200,
+          scaleX: scale,
+          scaleY: scale,
+          originX: 'center',
+          originY: 'center',
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false,
+        });
+
+        canvas.add(img);
+        canvas.sendToBack(img);
+        canvas.renderAll();
+      }).catch(() => {
+        canvas.backgroundColor = '#333';
         canvas.renderAll();
       });
     });
+
     return () => {
       if (fabricRef.current) {
         fabricRef.current.dispose();
@@ -54,12 +92,17 @@ export default function MemeEditor({ room, myId }) {
     if (!fabricRef.current) return;
     import('fabric').then(({ Textbox }) => {
       const text = new Textbox('Ton texte ici', {
-        left: 50, top: 50, width: 200, fontSize: 24,
-        fill: '#000000', backgroundColor: 'rgba(255,255,255,0.8)',
-        borderRadius: 8,
+        left: 50,
+        top: 50,
+        width: 200,
+        fontSize: 24,
+        fill: '#000000',
+        backgroundColor: 'rgba(255,255,255,0.85)',
+        padding: 8,
       });
       fabricRef.current.add(text);
       fabricRef.current.setActiveObject(text);
+      fabricRef.current.renderAll();
     });
   }
 
@@ -80,34 +123,42 @@ export default function MemeEditor({ room, myId }) {
         <span data-testid="swaps-left">🔄 {swapsLeft} swap(s)</span>
       </div>
 
-      <canvas data-testid="fabric-canvas" ref={canvasRef} />
+      <div className="canvas-wrapper">
+        <canvas data-testid="fabric-canvas" ref={canvasRef} />
+      </div>
 
       <div className="editor-tools">
         <button data-testid="add-text-btn" onClick={addTextBubble}>
-          + Texte
+          + Ajouter du texte
         </button>
+        {!submitted ? (
+          <button data-testid="submit-btn" className="submit-btn" onClick={handleSubmit}>
+            ✅ Soumettre mon mème
+          </button>
+        ) : (
+          <span data-testid="submitted-msg" style={{ color: '#4ade80' }}>
+            ✅ Mème soumis ! En attente des autres...
+          </span>
+        )}
       </div>
 
-      {swapsLeft > 0 && roundImages.length > 1 && (
+      {swapsLeft > 0 && swapImages.length > 0 && (
         <div data-testid="swap-section" className="swap-section">
-          <h4>Swapper ton image:</h4>
-          {roundImages.map(img => (
-            img.id !== myImageId && (
-              <button key={img.id} data-testid={`swap-btn-${img.id}`}
-                onClick={() => handleSwap(img.id)}>
-                Swap
+          <h4>🔄 Swapper ton image :</h4>
+          <div className="swap-grid">
+            {swapImages.map(img => (
+              <button
+                key={img.id}
+                className="swap-thumb"
+                data-testid={`swap-btn-${img.id}`}
+                onClick={() => handleSwap(img.id)}
+                title="Prendre cette image"
+              >
+                <img src={img.base64} alt="option swap" />
               </button>
-            )
-          ))}
+            ))}
+          </div>
         </div>
-      )}
-
-      {!submitted ? (
-        <button data-testid="submit-btn" onClick={handleSubmit}>
-          Soumettre mon mème
-        </button>
-      ) : (
-        <p data-testid="submitted-msg">✅ Mème soumis ! En attente des autres...</p>
       )}
     </div>
   );

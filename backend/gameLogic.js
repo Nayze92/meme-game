@@ -12,6 +12,27 @@ function startSelection(room) {
   return room;
 }
 
+// New flow: skip selection, assign random image to each player directly
+function startCreationDirect(room) {
+  room.phase = 'creation';
+  room.currentRound += 1;
+  room.memes = [];
+  room.votes = {};
+  room.playerImages = {};
+  room.players.forEach(p => { p.swapsLeft = room.settings.maxSwaps; });
+
+  // All library images available for swaps this round
+  room.roundImages = room.library.map(img => img.id);
+
+  // Assign a random image to each player (duplicates allowed)
+  room.players.forEach(player => {
+    const randomImg = room.library[Math.floor(Math.random() * room.library.length)];
+    room.playerImages[player.id] = randomImg.id;
+  });
+
+  return room;
+}
+
 function selectImage(room, socketId, imageId) {
   if (room.selectionQueue[0] !== socketId) return { error: 'not your turn' };
   const image = room.library.find(img => img.id === imageId);
@@ -71,4 +92,4 @@ function isGameOver(room) {
   return room.currentRound >= room.settings.totalRounds;
 }
 
-module.exports = { startSelection, selectImage, swapImage, submitMeme, submitVote, allVotesIn, calculateScores, isGameOver };
+module.exports = { startSelection, startCreationDirect, selectImage, swapImage, submitMeme, submitVote, allVotesIn, calculateScores, isGameOver };
