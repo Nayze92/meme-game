@@ -73,7 +73,7 @@ export default function App() {
     case 'lobby':      return <Lobby {...props} />;
     case 'selection':  return <Selection {...props} />;
     case 'creation':   return <MemeEditor {...props} />;
-    case 'reveal':     return <Reveal {...props} revealMemes={revealMemes} />;
+    case 'reveal':     return <Reveal {...props} />;
     case 'vote':       return <VoteScreen {...props} />;
     case 'scores':     return <Scoreboard {...props} voteResults={voteResults} isLastRound={false} />;
     case 'gameover':   return <Scoreboard {...props} voteResults={voteResults} finalScores={finalScores} isLastRound={true} />;
